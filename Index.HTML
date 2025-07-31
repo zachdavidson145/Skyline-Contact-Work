@@ -1,0 +1,212 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { LucideSearch } from "lucide-react";
+import { motion } from "framer-motion";
+
+// Sample location data; in real use this should be fetched from an API/backend
+const SAMPLE_LOCATIONS = [
+  { id: 1, name: "Ralph Sampson Park", city: "Harrisonburg", state: "VA", type: "Public", lastContact: "2025-07-25", hours: "10:00 AM - 8:00 PM (sprayground)/dawn to dusk for general park unless otherwise noted", description: "Large city park with spraygrounds, courts, and fields; good for outreach and recreation." },
+  { id: 2, name: "Target", city: "Harrisonburg", state: "VA", type: "Retail", lastContact: "2025-07-20", hours: "Mon-Sat 8:00 AM - 10:00 PM, Sun 8:00 AM - 10:00 PM (Yelp lists similar)", description: "High-traffic retail location; useful for contact work around community events." },
+  { id: 3, name: "Cicis Pizza - E Market St", city: "Harrisonburg", state: "VA", type: "Partner", lastContact: "2025-07-20", hours: "Daily 11:00 AM - 9:00 PM (Fri/Sat until 10 PM)", description: "Family-friendly eatery; potential casual meet-and-greet spot." },
+  // existing sample placeholder kept for expansion
+  { id: 4, name: "Church Youth Center", city: "Troy", state: "NY", type: "Partner", lastContact: "2025-06-30", description: "Has existing relationships; good for follow-up." },
+];
+
+// Location card component
+function LocationCard({ location }) {
+  return (
+    <Card className="w-full mb-4 shadow-lg rounded-2xl">
+      <CardContent className="p-4">
+        <div className="flex justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">{location.name}</h2>
+            <p className="text-sm text-muted-foreground">{location.city}, {location.state}</p>
+            <p className="mt-1 text-sm">{location.description}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs">Type: {location.type}</p>
+            <p className="text-xs">Last Contact: {location.lastContact}</p>
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Button size="sm">Mark Contacted</Button>
+          <Button size="sm" variant="outline">View Details</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FilterBar({ filters, setFilters, onSearch }) {
+  return (
+    <div className="flex flex-wrap gap-4 items-end mb-6">
+      <div className="flex-1 min-w-[220px]">
+        <label className="block text-xs font-medium mb-1">Search by name or city</label>
+        <div className="relative">
+          <Input
+            placeholder="Search..."
+            value={filters.query}
+            onChange={(e) => setFilters(f => ({ ...f, query: e.target.value }))}
+          />
+          <LucideSearch className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Type</label>
+        <Select value={filters.type} onValueChange={(val) => setFilters(f => ({ ...f, type: val }))}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue>{filters.type || 'All'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All</SelectItem>
+            <SelectItem value="School">School</SelectItem>
+            <SelectItem value="Public">Public</SelectItem>
+            <SelectItem value="Partner">Partner</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Sort by</label>
+        <Select value={filters.sort} onValueChange={(val) => setFilters(f => ({ ...f, sort: val }))}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue>{filters.sort || 'Last Contact'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="lastContact">Last Contact</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="ml-auto">
+        <Button onClick={onSearch}>Apply</Button>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [locations, setLocations] = useState([]);
+  const [filters, setFilters] = useState({ query: '', type: '', sort: 'lastContact' });
+  const [filtered, setFiltered] = useState([]);
+
+  useEffect(() => {
+    // placeholder for fetching real data; currently using sample
+    setLocations(SAMPLE_LOCATIONS);
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [locations, filters]);
+
+  function applyFilters() {
+    let result = [...locations];
+    if (filters.query) {
+      const q = filters.query.toLowerCase();
+      result = result.filter(l => l.name.toLowerCase().includes(q) || l.city.toLowerCase().includes(q));
+    }
+    if (filters.type) {
+      result = result.filter(l => l.type === filters.type);
+    }
+    if (filters.sort === 'lastContact') {
+      result.sort((a, b) => new Date(b.lastContact) - new Date(a.lastContact));
+    } else if (filters.sort === 'name') {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    setFiltered(result);
+  }
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold">YoungLife Contact Work Portal</h1>
+        <p className="mt-2 text-gray-600">Volunteer leaders can find nearby contact opportunities, track last outreach, and coordinate follow-ups.</p>
+      </header>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+        <FilterBar filters={filters} setFilters={setFilters} onSearch={applyFilters} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card className="mb-6 rounded-2xl">
+              <CardContent>
+                <h2 className="text-xl font-semibold mb-2">Map View (placeholder)</h2>
+                <div className="h-[320px] bg-slate-100 rounded-xl flex items-center justify-center">
+                  <div className="text-sm text-slate-500">Map integration here (e.g., Leaflet/Google Maps) showing filtered locations. <!-- leave explicit space for embedding an interactive map -->
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {/* New Schedules Section */}
+            <Card className="mb-6 rounded-2xl">
+              <CardContent>
+                <h2 className="text-xl font-semibold mb-2">Upcoming Local Sports & Contact Opportunities</h2>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h3 className="font-semibold">Rocktown High School Football (2025-2026)</h3>
+                    <p>Varsity schedule for 2025-2026 is not yet publicly posted in full; volunteer leaders can follow updates via the athletics site or MaxPreps. Current known JV opener: <strong>September 25, 2025 @ Broadway</strong> at 6:00pm. (Schedules subject to change—check with the school or MaxPreps for final dates/times.)</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Skyline Middle School Volleyball (2025 season)</h3>
+                    <p>Season begins <strong>August 18, 2025</strong>. Tryouts: August 18, 19 & 20 from 2:15pm–4:00pm. Parent meeting: August 25, 2025 at 4:00pm in the gym. Games are on Tuesdays and Thursdays starting at 4:30pm unless otherwise noted.</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Skyline Middle School Cross Country (2025 season)</h3>
+                    <p>Season begins <strong>August 18, 2025</strong>. Optional practices: August 13 (6th grade only) and August 14 (all grades) from 2:15pm–3:45pm. Official practice begins August 18, 2025 at 2:15pm. Pickup is in the front of the school.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+                  <div className="text-sm text-slate-500">Map integration here (e.g., Leaflet/Google Maps) showing filtered locations.</div>
+                </div>
+              </CardContent>
+            </Card>
+            <div>
+              {filtered.map(loc => (
+                <LocationCard key={loc.id} location={loc} />
+              ))}
+              {filtered.length === 0 && (
+                <p className="text-center mt-6 text-sm text-gray-500">No locations match the current filters.</p>
+              )}
+            </div>
+          </div>
+          <div>
+            <Card className="rounded-2xl">
+              <CardContent>
+                <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
+                <div className="flex flex-col gap-3">
+                  <Button>Report New Contact Location</Button>
+                  <Button variant="outline">Download Contact Sheet</Button>
+                  <Button>Sync with Calendar</Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl mt-6">
+              <CardContent>
+                <h2 className="text-lg font-semibold mb-3">Leader Tips</h2>
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  <li>Follow up within a week of initial outreach.</li>
+                  <li>Log notes about conversations for team continuity.</li>
+                  <li>Invite youth to the next event directly after contact.</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </motion.div>
+      <footer className="mt-16 text-center text-xs text-gray-400">
+        <p>Built for YoungLife volunteer leaders. Data is editable by administrators. Authentication & backend needed for production.</p>
+      </footer>
+    </div>
+  );
+}
+
+/*
+  To expand this into a full website:
+  1. Hook up real backend (e.g., Supabase/Firebase or custom API) to store contact locations and leader activity.
+  2. Add authentication (e.g., OAuth with YoungLife accounts or simple email login).
+  3. Integrate a mapping solution (Leaflet with OpenStreetMap, Google Maps API, etc.) to visualize the locations.
+  4. Enable offline caching for leaders in low-connectivity areas.
+  5. Add user preferences, team views, and exportable outreach reports.
+  6. Localize content if multiple regions are supported.
+*/
